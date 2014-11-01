@@ -1,4 +1,9 @@
 releases:
+  - version: 5.14.2
+    sha1:    e48d11c6fd1ee61985b475d7f261d774296a1367
+    pause:   FLORA
+    extra_flags: "-A ccflags=-fwrapv"
+
   - version: 5.18.4
     sha1:    69c34558a0a939a7adbbc1de48c06ea418d81e27
     pause:   RJBS

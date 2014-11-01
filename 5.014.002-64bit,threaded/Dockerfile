@@ -5,10 +5,14 @@ RUN apt-get update && apt-get install -y curl procps
 
 RUN mkdir /usr/src/perl
 WORKDIR /usr/src/perl
-RUN curl -SL http://www.cpan.org/src/5.0/perl-5.14.2.tar.gz \
-                | tar -xz --strip-components=1
 
-RUN ./Configure -Dusethreads -Duse64bitall -des \
+COPY sha1.txt /tmp/sha1.txt
+RUN curl -SL https://cpan.metacpan.org/authors/id/F/FL/FLORA/perl-5.14.2.tar.bz2 -o perl-5.14.2.tar.bz2 \
+    && sha1sum -c /tmp/sha1.txt \
+    && tar --strip-components=1 -xjf perl-5.14.2.tar.bz2 -C /usr/src/perl \
+    && rm perl-5.14.2.tar.bz2 /tmp/sha1.txt
+
+RUN ./Configure -Dusethreads -Duse64bitall -A ccflags=-fwrapv -des \
         && make -j$(nproc) \
         && TEST_JOBS=$(nproc) make test_harness \
         && make install \
