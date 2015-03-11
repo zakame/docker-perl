@@ -8,11 +8,11 @@ RUN apt-get update \
 RUN mkdir /usr/src/perl
 WORKDIR /usr/src/perl
 
-RUN curl -SL https://cpan.metacpan.org/authors/id/R/RJ/RJBS/perl-5.18.4.tar.bz2 -o perl-5.18.4.tar.bz2 \
-    && echo '69c34558a0a939a7adbbc1de48c06ea418d81e27 *perl-5.18.4.tar.bz2' | sha1sum -c - \
-    && tar --strip-components=1 -xjf perl-5.18.4.tar.bz2 -C /usr/src/perl \
-    && rm perl-5.18.4.tar.bz2 \
-    && ./Configure -Dusethreads -Duse64bitall -A ccflags=-fwrapv -des \
+RUN curl -SL https://cpan.metacpan.org/authors/id/S/SH/SHAY/perl-5.20.2.tar.bz2 -o perl-5.20.2.tar.bz2 \
+    && echo '63126c683b4c79c35008a47d56f7beae876c569f *perl-5.20.2.tar.bz2' | sha1sum -c - \
+    && tar --strip-components=1 -xjf perl-5.20.2.tar.bz2 -C /usr/src/perl \
+    && rm perl-5.20.2.tar.bz2 \
+    && ./Configure -Duse64bitall  -des \
     && make -j$(nproc) \
     && TEST_JOBS=$(nproc) make test_harness \
     && make install \
@@ -24,4 +24,4 @@ RUN curl -SL https://cpan.metacpan.org/authors/id/R/RJ/RJBS/perl-5.18.4.tar.bz2 
 
 WORKDIR /root
 
-CMD ["perl5.18.4","-de0"]
+CMD ["perl5.20.2","-de0"]
