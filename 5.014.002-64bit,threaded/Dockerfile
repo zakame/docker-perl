@@ -1,4 +1,4 @@
-FROM buildpack-deps
+FROM buildpack-deps:wheezy
 MAINTAINER Zak B. Elep <zakame@cpan.org>
 
 RUN apt-get update \
