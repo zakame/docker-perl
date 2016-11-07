@@ -6,13 +6,15 @@ RUN apt-get update \
     && rm -fr /var/lib/apt/lists/*
 
 RUN mkdir /usr/src/perl
+COPY *.patch /usr/src/perl/
 WORKDIR /usr/src/perl
 
 RUN curl -SL https://cpan.metacpan.org/authors/id/F/FL/FLORA/perl-5.14.2.tar.bz2 -o perl-5.14.2.tar.bz2 \
     && echo 'e48d11c6fd1ee61985b475d7f261d774296a1367 *perl-5.14.2.tar.bz2' | sha1sum -c - \
     && tar --strip-components=1 -xjf perl-5.14.2.tar.bz2 -C /usr/src/perl \
     && rm perl-5.14.2.tar.bz2 \
-    && ./Configure -Duse64bitall -A ccflags=-fwrapv -des \
+    && cat *.patch | patch -p1 \
+    && ./Configure -Duse64bitall -Duseshrplib -A ccflags=-fwrapv -des \
     && make -j$(nproc) \
     && TEST_JOBS=$(nproc) make test_harness \
     && make install \
@@ -20,7 +22,7 @@ RUN curl -SL https://cpan.metacpan.org/authors/id/F/FL/FLORA/perl-5.14.2.tar.bz2
     && curl -LO https://raw.githubusercontent.com/miyagawa/cpanminus/master/cpanm \
     && chmod +x cpanm \
     && ./cpanm App::cpanminus \
-    && rm -fr ./cpanm /root/.cpanm /usr/src/perl
+    && rm -fr ./cpanm /root/.cpanm /usr/src/perl /tmp/*
 
 WORKDIR /root
 
