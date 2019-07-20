@@ -1,0 +1,73 @@
+version: 2
+alias:
+  &build-image
+    docker:
+      - image: docker:dind
+    steps:
+      - setup_remote_docker
+      - run:
+          command: apk add --no-cache --no-progress bash git openssh
+          name: Set up dependencies for checkout
+      - checkout
+      - run:
+          command: git clone --depth 1 --single-branch https://github.com/docker-library/official-images.git
+          name: Clone docker-library/official-images (for testing)
+      - run:
+          command: |
+            docker version
+            docker build --no-cache -t perl:$IMAGE_TAG $IMAGE_DIR
+          name: Build image
+      - run:
+          command: ./official-images/test/run.sh perl:$IMAGE_TAG
+          name: Run tests
+jobs:
+  build-main:
+    <<: *build-image
+    environment:
+      IMAGE_TAG: latest
+      IMAGE_DIR: 5.030.000-main-buster
+  build-slim:
+    <<: *build-image
+    environment:
+      IMAGE_TAG: slim
+      IMAGE_DIR: 5.030.000-slim-buster
+  build-main-threaded:
+    <<: *build-image
+    environment:
+      IMAGE_TAG: threaded
+      IMAGE_DIR: 5.030.000-main,threaded-buster
+  build-slim-threaded:
+    <<: *build-image
+    environment:
+      IMAGE_TAG: slim-threaded
+      IMAGE_DIR: 5.030.000-slim,threaded-buster
+  generate:
+    docker:
+      - image: perl:latest
+    steps:
+      - run:
+          command: |
+            git config --global user.email "test@circle-ci"
+            git config --global user.name "CircleCI Executor"
+          name: Set up git user name and email
+      - checkout
+      - run:
+          command: cpanm --quiet --installdeps --notest .
+          name: Install dependencies
+      - run:
+          command: perl ./generate.pl
+          name: Generate Dockerfiles
+      - run:
+          command: git --no-pager diff --stat HEAD
+          name: Show diffstat (if any)
+workflows:
+  build-latest-supported-perl:
+    jobs:
+      - build-main
+      - build-slim
+      - build-main-threaded
+      - build-slim-threaded
+  generate-dockerfiles-patches:
+    jobs:
+      - generate
+  version: 2
