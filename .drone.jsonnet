@@ -83,5 +83,8 @@ local GeneratePatchesPipeline() = {
   BuildAndTestImagesPipeline(version, variant)
   for version in ["5.032.000", "5.030.003"]
   for variant in ["main", "main,threaded", "slim", "slim,threaded"]
+] + [
+  BuildAndTestImagesPipeline("5.032.000", variant)
+  for variant in ["alpine","alpine,threaded"]
 ]
 
