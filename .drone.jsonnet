@@ -1,9 +1,12 @@
 local official_images_repo = 'https://github.com/docker-library/official-images.git';
 
+local perlTag(version, variant, osversion) = version + '-' + variant
++ if std.startsWith(variant, "alpine") then '' else ( '-' + osversion );
+
 local BuildAndTestImagesPipeline(version, variant, osversion = 'buster') = {
   kind: "pipeline",
   type: "docker",
-  name: "build-and-test-" + version + '-' + variant + '-' + osversion,
+  name: "build-and-test-" + perlTag(version, variant, osversion),
   steps: [
     {
       name: "build-image",
@@ -17,7 +20,7 @@ local BuildAndTestImagesPipeline(version, variant, osversion = 'buster') = {
       commands: [
         "sleep 10",
         "docker version",
-        "docker build --no-cache --tag perl " + version + '-' + variant + '-' + osversion
+        "docker build --no-cache --tag perl " + perlTag(version, variant, osversion)
       ]
     },
     {
