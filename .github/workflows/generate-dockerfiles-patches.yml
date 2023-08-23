@@ -2,10 +2,9 @@ name: Generate Dockerfiles/patches
 
 on:
   push:
-    branches:
-      - '**'
-    tags-ignore:
-      - '*'
+    paths:
+      - 'config.yml'
+      - 'generate.pl'
   pull_request:
 
 jobs:

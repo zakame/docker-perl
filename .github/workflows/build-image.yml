@@ -2,10 +2,10 @@ name: Build and Test
 
 on:
   push:
-    branches:
-      - '**'
-    tags-ignore:
-      - '*'
+    paths:
+      - '**/Dockerfile'
+      - '**/*.patch'
+      - '!eol/**'
   pull_request:
 
 defaults:
