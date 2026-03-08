@@ -1,71 +1,65 @@
-diff --git a/hints/linux.sh b/hints/linux.sh
-index e1508c7..d5a7f25 100644
---- a/hints/linux.sh
-+++ b/hints/linux.sh
-@@ -106,12 +106,29 @@ case "`${cc:-cc} -V 2>&1`" in
-     '') optimize='-O3' ;;
-     esac
-     ;;
-+
-+# the new Intel C/C++ compiler, LLVM based, replaces ICC which
-+# is no longer maintained from around October 2023
-+*"Intel(R) oneAPI DPC++/C++ Compiler"*)
-+    # version from end of first line, like:
-+    # Intel(R) oneAPI DPC++/C++ Compiler 2024.1.0 (2024.1.0.20240308)
-+    ccversion=`${cc:-cc} --version | sed -n -e 's/^Intel.*(\(.*\))/\1/p'`
-+    # If we're using ICX, we usually want the best performance
-+    case "$optimize" in
-+    '') optimize='-O3' ;;
-+    esac
-+    # fp-model defaults to "fast" which mis-handles NaNs
-+    ccflags="-fp-model=precise $ccflags"
-+    ;;
-+
- *" Sun "*"C"*)
-     # Sun's C compiler, which might have a 'tag' name between
-     # 'Sun' and the 'C':  Examples:
-     # cc: Sun C 5.9 Linux_i386 Patch 124871-01 2007/07/31
-     # cc: Sun Ceres C 5.10 Linux_i386 2008/07/10
--    test "$optimize" || optimize='-xO2'
-+    # cc: Studio 12.6 Sun C 5.15 Linux_i386 2017/05/30
-+    # GH #21535 - apparent optimization bug in workshop cc
-+    test "$optimize" || optimize='-O1'
-     cccdlflags='-KPIC'
-     lddlflags='-G -Bdynamic'
-     # Sun C doesn't support gcc attributes, but, in many cases, doesn't
-@@ -123,6 +140,15 @@ case "`${cc:-cc} -V 2>&1`" in
-     d_attribute_pure='undef'
-     d_attribute_unused='undef'
-     d_attribute_warn_unused_result='undef'
-+    case "$cc" in
-+    *c99)   # Without -Xa c99 errors on some Linux system headers
-+            # in particular zero sized arrays at the end of structs
-+	    case "$ccflags" in
-+		*-Xa*)	;;
-+		*) ccflags="$ccflags -Xa" ;;
-+	    esac
-+	    ;;
-+    esac
-     ;;
+diff --git a/hints/darwin.sh b/hints/darwin.sh
+index 72bdfb6..9267791 100644
+--- a/hints/darwin.sh
++++ b/hints/darwin.sh
+@@ -287,14 +287,14 @@ case "$osvers" in  # Note: osvers is the kernel version, not the 10.x
+    ldflags="${ldflags} -flat_namespace"
+    lddlflags="${ldflags} -bundle -undefined suppress"
+    ;;
+-[7-9].*)   # OS X 10.3.x - 10.5.x
++[7-8].*)   # OS X 10.3.x - 10.4.x
+    lddlflags="${ldflags} -bundle -undefined dynamic_lookup"
+    case "$ld" in
+        *MACOSX_DEPLOYMENT_TARGET*) ;;
+        *) ld="env MACOSX_DEPLOYMENT_TARGET=10.3 ${ld}" ;;
+    esac
+    ;;
+-*)        # OS X 10.6.x - current
++*)        # OS X 10.5.x - current
+    # The MACOSX_DEPLOYMENT_TARGET is not needed,
+    # but the -mmacosx-version-min option is always used.
+ 
+@@ -357,13 +357,26 @@ EOM
+         esac
+     fi
+ 
+-    # The OS is buggy with respect to this.
+-    ccflags="$ccflags -DNO_POSIX_2008_LOCALE"
+-
+    lddlflags="${ldflags} -bundle -undefined dynamic_lookup"
+    ;;
  esac
  
-@@ -166,7 +192,7 @@ esac
- if [ -x /usr/bin/gcc ] ; then
-     gcc=/usr/bin/gcc
- # clang also provides -print-search-dirs
--elif ${cc:-cc} --version 2>/dev/null | grep -q '^clang ' ; then
-+elif ${cc:-cc} --version 2>/dev/null | grep -q -e '^clang version' -e ' clang version'; then
-     gcc=${cc:-cc}
- else
-     gcc=gcc
-@@ -460,3 +486,10 @@ case "$libdb_needs_pthread" in
-     libswanted="$libswanted pthread"
-     ;;
- esac
++# Darwin's querylocale() has races
++ccflags="$ccflags -DNO_THREAD_SAFE_QUERYLOCALE"
 +
-+# Detect case-insensitive file systems
-+echo X >UU/casesense.tmp
-+if test -f UU/CASESENSE.TMP && test -f UU/CaSeSeNsE.tMp; then
-+    firstmakefile='GNUmakefile'
++# But it doesn't much matter because the whole implementation has bugs [GH
++# #21556]
++ccflags="$ccflags -DNO_POSIX_2008_LOCALE"
++
++# See comments in locale.c about this #define
++ccflags="$ccflags -DHAS_BROKEN_LANGINFO_CODESET"
++
++# Get: "Assertion failed: (p->val == key), function lookup_substsearch, file
++# collate.c, line 596."
++if test "$darwin_major" -ge 24 && test "$perl_revision" -ge 5 && ( test "$perl_version" -ge 42 || ( test "$perl_version" -eq 41 && test "$perl_subversion" -ge 11 ) ); then
++    ccflags="$ccflags -DNO_LOCALE_COLLATE"
 +fi
-+rm -f UU/casesense.tmp
++
+ ldlibpthname='DYLD_LIBRARY_PATH';
+ 
+ # useshrplib=true results in much slower startup times.
+@@ -420,11 +433,13 @@ EOM
+     case `uname -p` in 
+     powerpc) arch=ppc64 ;;
+     i386) arch=x86_64 ;;
++    arm) arch=arm64 ;;
+     *) cat <<EOM >&4
+ 
+ *** Don't recognize processor, can't specify 64 bit compilation.
+ 
+ EOM
++     exit 1
+     ;;
+     esac
+     for var in ccflags cppflags ld ldflags
